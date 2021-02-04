@@ -1,0 +1,65 @@
+---
+title: "NHSE vaccinations"
+author: "Sebastien Peytrignet"
+date: "2/4/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+
+#Markdown setup
+knitr::opts_chunk$set(echo = TRUE)
+
+#Load packages
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(dplyr,stringr,sp,ggplot2,plyr,data.table,
+               tibble,pbapply,pbmcapply,here,readxl,rvest,
+               downloader,curl,lubridate,hrbrthemes,plotly,
+               ggthemes,scales)
+
+#Clean up the global environment
+rm(list = ls())
+
+#Git directory
+gitdir <- dirname(rstudioapi::getSourceEditorContext()$path)
+
+#Directory to save files
+rawdatadir <- "M:/Analytics/NHS England Vaccinations/Weekly/"
+rawdataparentdir <- "M:/Analytics/NHS England Vaccinations/"
+
+#Load data
+age_dose_summary <- fread(paste0(rawdataparentdir,"Summary/age_dose_summary.csv"),
+                                 header=TRUE, sep=",", check.names=T)
+```
+
+## COVID-19 vaccinations by age group and dose
+
+```{r age_dose, echo=FALSE, message=FALSE, warning=FALSE,fig.width=9,fig.height=6}
+chart.data <- filter(age_dose_summary,ageband_bis!="allages") %>%
+  mutate(.,ageband_bis=str_replace_all(ageband_bis,"under80","Under 80")) %>%
+  mutate(.,ageband_bis=str_replace_all(ageband_bis,"over80","Over 80")) %>%
+  mutate(.,dose=str_replace_all(dose,"first","First dose")) %>%
+  mutate(.,dose=str_replace_all(dose,"second","Second dose"))
+
+vax_by_age_dose_plot <- ggplot(chart.data,
+  aes(fill=dose, y=cumnumber.people, x=date)) +
+  facet_wrap(~ ageband_bis) +
+  geom_bar(position="stack", stat="identity") +
+  ggtitle("COVID-19 vaccinations") +
+  scale_y_continuous(name=" ", labels = scales::comma) +
+  xlab(" ") +
+  scale_fill_tableau() +
+  theme_economist() +
+  theme(
+    # Hide panel borders and remove grid lines
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    # Change axis line
+    axis.line = element_line(colour = "black"),
+    plot.background = element_rect(fill = "white"),
+    legend.title = element_blank()
+  )
+
+ggplotly(vax_by_age_dose_plot)
+```
